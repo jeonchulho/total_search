@@ -1,0 +1,107 @@
+version: "3.9"
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.12
+    container_name: total-search-etcd
+    command:
+      - /usr/local/bin/etcd
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --data-dir=/etcd
+    volumes:
+      - etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    container_name: total-search-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  milvus:
+    image: milvusdb/milvus:v2.4.13
+    container_name: total-search-milvus
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: "false"
+      MINIO_BUCKET_NAME: ${MINIO_MILVUS_BUCKET}
+    depends_on:
+      - etcd
+      - minio
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - milvus_data:/var/lib/milvus
+
+  search-api:
+    build:
+      context: ./services/search_api
+    container_name: total-search-api
+    environment:
+      API_KEY: ${API_KEY}
+      MILVUS_HOST: ${MILVUS_HOST}
+      MILVUS_PORT: ${MILVUS_PORT}
+      MILVUS_COLLECTION: ${MILVUS_COLLECTION}
+      MILVUS_AUTO_MIGRATE_DIM: ${MILVUS_AUTO_MIGRATE_DIM}
+      MILVUS_BACKUP_PREFIX: ${MILVUS_BACKUP_PREFIX}
+      EMBEDDING_ENABLED: ${EMBEDDING_ENABLED}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      EMBEDDING_BGE_MODEL: ${EMBEDDING_BGE_MODEL}
+      EMBEDDING_API_BASE: ${EMBEDDING_API_BASE}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_TIMEOUT_SEC: ${EMBEDDING_TIMEOUT_SEC}
+      EMBEDDING_MAX_LENGTH: ${EMBEDDING_MAX_LENGTH}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE}
+      EMBEDDING_AUTO_BATCH: ${EMBEDDING_AUTO_BATCH}
+      EMBEDDING_MAX_CONCURRENCY: ${EMBEDDING_MAX_CONCURRENCY}
+      EMBEDDING_DEVICE: ${EMBEDDING_DEVICE}
+      VECTOR_DIM: ${VECTOR_DIM}
+    depends_on:
+      - milvus
+    ports:
+      - "${SEARCH_API_PORT}:8000"
+
+  webhard-api:
+    build:
+      context: ./services/webhard_api
+    container_name: total-webhard-api
+    environment:
+      API_KEY: ${API_KEY}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SECURE: ${MINIO_SECURE}
+      MINIO_WEBHARD_BUCKET: ${MINIO_WEBHARD_BUCKET}
+      WEBHARD_DB_PATH: ${WEBHARD_DB_PATH}
+      AUTH_TOKEN_TTL_HOURS: ${AUTH_TOKEN_TTL_HOURS}
+    depends_on:
+      - minio
+    ports:
+      - "${WEBHARD_API_PORT}:8000"
+    volumes:
+      - webhard_data:/data
+
+volumes:
+  etcd_data:
+  minio_data:
+  milvus_data:
+  webhard_data:

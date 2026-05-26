@@ -1,0 +1,9 @@
+fastapi==0.115.2
+uvicorn[standard]==0.30.6
+minio==7.2.8
+pydantic-settings==2.6.0
+python-multipart==0.0.12
+sqlalchemy==2.0.36
+pymysql==1.1.1
+psycopg[binary]==3.2.3
+oracledb==2.4.1
