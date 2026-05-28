@@ -32,6 +32,18 @@
 		│       ├── security.py
 		│       ├── settings.py
 		│       └── vectorizer.py
+		├── webhard_client
+		│   ├── Dockerfile
+		│   ├── package.json
+		│   ├── vite.config.ts
+		│   └── src
+		│       ├── main.ts
+		│       ├── styles.css
+		│       ├── api
+		│       │   └── webhard.ts
+		│       └── lib
+		│           ├── http.ts
+		│           └── storage.ts
 		└── webhard_api
 				├── Dockerfile
 				├── requirements.txt
@@ -58,6 +70,7 @@ Webhard DB 옵션:
 	- `mysql+pymysql://user:pass@host:3306/webhard`
 	- `postgresql+psycopg://user:pass@host:5432/webhard`
 	- `oracle+oracledb://user:pass@host:1521/?service_name=SERVICE`
+- 브라우저 클라이언트 CORS 허용 도메인: `WEBHARD_CORS_ALLOW_ORIGINS`
 
 라우터 SQL 관리:
 
@@ -99,7 +112,29 @@ curl http://localhost:8000/health
 curl http://localhost:8001/health
 ```
 
-4. MinIO 콘솔 접속
+4. Webhard 클라이언트 접속
+
+- Docker Compose 실행 시: `http://localhost:${WEBHARD_CLIENT_PORT}`
+- 기본값: `http://localhost:5174`
+
+개발 모드 실행:
+
+```bash
+cd services/webhard_client
+cp .env.example .env
+npm install
+npm run dev
+```
+
+환경변수:
+
+- `VITE_WEBHARD_API_BASE_URL`
+	- 빈 값이면 dev server proxy(`/nc`) 사용
+	- 예: `http://localhost:8001`
+- `VITE_WEBHARD_API_PROXY`
+	- dev proxy 대상(기본: `http://localhost:8001`)
+
+5. MinIO 콘솔 접속
 
 - URL: `http://localhost:9001`
 - 계정: `.env`의 `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`

@@ -16,6 +16,14 @@ class Settings(BaseSettings):
     webhard_db_path: str = "/data/webhard.db"
     database_url: str | None = None
     auth_token_ttl_hours: int = 24
+    webhard_cors_allow_origins: str = "http://localhost:5174,http://localhost:8080"
+
+    @property
+    def cors_allow_origins(self) -> list[str]:
+        raw = self.webhard_cors_allow_origins.strip()
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property
     def effective_database_url(self) -> str:
